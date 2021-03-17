@@ -2,7 +2,7 @@ BINARY=engine
 test: 
 	go test -v -cover -covermode=atomic ./...
 
-engine:
+build:
 	go build -o ${BINARY} app/*.go
 
 
@@ -22,7 +22,7 @@ remove:
 	docker stop go_oauth2_api go_oauth2_mysql go_oauth2_redis
 	docker rm go_oauth2_api go_oauth2_mysql go_oauth2_redis
 
-stop:
+down:
 	docker-compose down
 
 lint-prepare:
@@ -32,4 +32,4 @@ lint-prepare:
 lint:
 	./bin/golangci-lint run ./...
 
-.PHONY: clean install unittest build docker run stop vendor lint-prepare lint remove
+.PHONY: clean install unittest build docker run down vendor lint-prepare lint remove

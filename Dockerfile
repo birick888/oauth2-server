@@ -8,7 +8,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN make engine
+RUN make build
 
 # Distribution
 FROM alpine:latest

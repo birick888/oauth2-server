@@ -27,8 +27,18 @@ var (
 	ErrOTPWrongOrExpire = errors.New("OTP wrong or expired")
 )
 
+var (
+	CodeErrEmailAlreadyExists      = 4101
+	CodeErrEmailOrPasswordNotMatch = 4102
+	CodeErrEmailNotExists          = 4103
+	CodeErrOTPWrongOrExpire        = 4104
+	CodeErrGenerateToken           = 4105
+	CodeErrDBError                 = 5101
+)
+
 // ResponseError represent the reseponse error struct
 type ResponseError struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -47,15 +57,6 @@ func GetStatusCode(err error) int {
 		return http.StatusConflict
 	case ErrBadParamInput:
 		return http.StatusBadRequest
-	case ErrEmailAlreadyExists:
-		return 4101
-	case ErrEmailOrPasswordNotMatch:
-		return 4102
-
-	case ErrEmailNotExists:
-		return 4103
-	case ErrOTPWrongOrExpire:
-		return 4104
 	default:
 		return http.StatusInternalServerError
 	}

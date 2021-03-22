@@ -66,19 +66,21 @@ func (u *UserHandler) Login(c echo.Context) (err error) {
 	ctx := c.Request().Context()
 	userStored, err := u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrEmailOrPasswordNotMatch, Message: domain.ErrEmailOrPasswordNotMatch.Error()})
 	}
 
 	// compare password
 	compare := common.IsMatchedPassword(password, userStored.Password)
 	if compare != true {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrEmailOrPasswordNotMatch, Message: domain.ErrEmailOrPasswordNotMatch.Error()})
 	}
 
 	// generate token
 	token, err := common.CreateToken(userStored.ID)
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Code: domain.CodeErrGenerateToken, Message: err.Error()})
 	}
 
 	// init json value to response
@@ -103,7 +105,8 @@ func (u *UserHandler) RequestOTP(c echo.Context) (err error) {
 	ctx := c.Request().Context()
 	_, err = u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: domain.ErrEmailNotExists.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrEmailNotExists, Message: domain.ErrEmailNotExists.Error()})
 	}
 
 	// Generate random OTP number 4 length
@@ -138,14 +141,16 @@ func (u *UserHandler) ResetPassword(c echo.Context) (err error) {
 	ctx := c.Request().Context()
 	userStored, err := u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: domain.ErrEmailNotExists.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrEmailNotExists, Message: domain.ErrEmailNotExists.Error()})
 	}
 
 	// Store OTP to redis
 	otpRedis, err := u.UserUsecase.GetOTP(ctx, email)
 
 	if otpRedis != otp {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: domain.ErrOTPWrongOrExpire.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrOTPWrongOrExpire, Message: domain.ErrOTPWrongOrExpire.Error()})
 	}
 
 	// Update new password to DB
@@ -153,7 +158,8 @@ func (u *UserHandler) ResetPassword(c echo.Context) (err error) {
 	err = u.UserUsecase.Update(ctx, &userStored)
 
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrDBError, Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, "Reset password successful")
@@ -179,7 +185,8 @@ func (u *UserHandler) Store(c echo.Context) (err error) {
 	user.UpdatedAt = time.Now()
 	err = u.UserUsecase.Store(ctx, &user)
 	if err != nil {
-		return c.JSON(http.StatusForbidden, domain.ResponseError{Message: err.Error()})
+		return c.JSON(http.StatusForbidden,
+			domain.ResponseError{Code: domain.CodeErrDBError, Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, user)
@@ -197,7 +204,8 @@ func (u *UserHandler) Delete(c echo.Context) error {
 
 	err = u.UserUsecase.Delete(ctx, id)
 	if err != nil {
-		return c.JSON(domain.GetStatusCode(err), domain.ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err),
+			domain.ResponseError{Code: domain.CodeErrDBError, Message: err.Error()})
 	}
 
 	return c.NoContent(http.StatusNoContent)

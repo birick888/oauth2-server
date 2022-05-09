@@ -20,7 +20,9 @@ func NewMysqlUserRepository(Conn *sql.DB) domain.UserRepository {
 	return &mysqlUserRepository{Conn}
 }
 
-func (m *mysqlUserRepository) fetch(ctx context.Context, query string, args ...interface{}) (result []domain.User, err error) {
+func (m *mysqlUserRepository) fetch(ctx context.Context,
+	query string,
+	args ...interface{}) (result []domain.User, err error) {
 	rows, err := m.Conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		logrus.Error(err)
@@ -56,7 +58,9 @@ func (m *mysqlUserRepository) fetch(ctx context.Context, query string, args ...i
 	return result, nil
 }
 
-func (m *mysqlUserRepository) Fetch(ctx context.Context, cursor string, num int64) (res []domain.User, nextCursor string, err error) {
+func (m *mysqlUserRepository) Fetch(ctx context.Context,
+	cursor string,
+	num int64) (res []domain.User, nextCursor string, err error) {
 	query := `SELECT id, username, email, password, updated_at, created_at FROM user LIMIT ? `
 
 	decodedCursor, err := repository.DecodeCursor(cursor)

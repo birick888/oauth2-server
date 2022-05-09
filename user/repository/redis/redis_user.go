@@ -24,7 +24,10 @@ func (m *redisUserRepository) GetOTP(ctx context.Context, email string) (string,
 }
 
 // SetOTP is
-func (m *redisUserRepository) SetOTP(ctx context.Context, email string, otp string, expireTime time.Duration) error {
+func (m *redisUserRepository) SetOTP(ctx context.Context,
+	email string,
+	otp string,
+	expireTime time.Duration) error {
 	m.redis.Set("otp:"+email, otp, expireTime)
 	return nil
 }

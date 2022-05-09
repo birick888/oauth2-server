@@ -3,13 +3,16 @@ package common
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/rand"
 	"mime/quotedprintable"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,9 +23,51 @@ type Token struct {
 	Token  string `json:"token" form:"token" query:"token"`
 }
 
+var (
+	header     map[string]string
+	from       string
+	password   string
+	recipients []string
+	host       string
+	port       string
+	msg        string
+	auth       smtp.Auth
+)
+
+func init() {
+	err := godotenv.Load(filepath.Join("./env", "test.env"))
+	if err != nil {
+		log.Fatalf("Error load env file. Err: %s", err)
+		os.Exit(2)
+	}
+
+	viper.SetConfigFile(`config.json`)
+	err = viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Error load config file. Err: %s", err)
+		os.Exit(2)
+	}
+
+	host = viper.GetString(`smtp.host`)
+	port = viper.GetString(`smtp.port`)
+	from = os.Getenv("SMTP_USER")
+	password = os.Getenv("SMTP_APP_PASSWORD")
+
+	header = make(map[string]string)
+	header["From"] = from
+	header["Subject"] = "[oauth2-server]Forgot password"
+	header["MIME-Version"] = "1.0"
+	header["Content-Type"] = fmt.Sprintf("%s; charset=\"utf-8\"", "text/html")
+	header["Content-Disposition"] = "inline"
+	header["Content-Transfer-Encoding"] = "quoted-printable"
+
+	msg = viper.GetString(`smtp.msg`)
+	auth = smtp.PlainAuth("", from, password, host)
+}
+
 // HashPassword is
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
@@ -35,8 +80,7 @@ func IsMatchedPassword(password, hash string) bool {
 // CreateToken is
 func CreateToken(userid int64) (string, error) {
 	var err error
-	//Creating Access Token
-	os.Setenv("ACCESS_SECRET", "jdnfksdmfksd") //this should be in an env file
+	// Creating Access Token
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
 	atClaims["user_id"] = userid
@@ -62,37 +106,8 @@ func VerifyToken(token string) (bool, error) {
 
 // SendEmail is
 func SendEmail(email string, otp int) (err error) {
-
-	viper.SetConfigFile(`config.json`)
-	err = viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	var (
-		from       = viper.GetString(`smtp.user`)
-		password   = viper.GetString(`smtp.password`)
-		recipients = []string{email}
-		host       = viper.GetString(`smtp.host`)
-		port       = viper.GetString(`smtp.port`)
-	)
-
-	auth := smtp.PlainAuth("", from, password, host)
-
-	msg := viper.GetString(`smtp.msg`)
-
 	msg = fmt.Sprintf(msg, email, otp)
-
-	header := make(map[string]string)
-	header["From"] = from
-	header["To"] = email
-	header["Subject"] = "Forgot password"
-
-	header["MIME-Version"] = "1.0"
-	header["Content-Type"] = fmt.Sprintf("%s; charset=\"utf-8\"", "text/html")
-	header["Content-Disposition"] = "inline"
-	header["Content-Transfer-Encoding"] = "quoted-printable"
-
+	recipients = []string{email}
 	headerMessage := ""
 	for key, value := range header {
 		headerMessage += fmt.Sprintf("%s: %s\r\n", key, value)

@@ -5,35 +5,48 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: oauth2_user_api
+    # Add platform run on MAC M1 apple silicon
+    platform: linux/amd64
     ports:
       - 9090:9090
+    env_file:
+      - ./env/test.env
     depends_on:
       - "mysql"
       - "redis"
     volumes:
       - ./config.json:/app/config.json
-    environment: 
-      WAIT_HOSTS: mysql:3306, redis:6379
+      - ./env:/app/env/
 
+    environment: 
+      WAIT_HOSTS: mysql:${MYSQL_PORT}, redis:${REDIS_PORT}
+  ###=================================================###
   mysql:
-    image: mysql:5.7 
+    image: mysql:5.7
+    # Add platform run on MAC M1 apple silicon
+    platform: linux/amd64
     container_name: go_oauth2_mysql
-    command: mysqld --user=root
+    env_file:
+      - ./env/test.env
     volumes:
       - ./db_oauth2.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - 3306:3306
+      - ${MYSQL_PORT}:${MYSQL_PORT}
     environment:
-      - MYSQL_DATABASE=db_oauth2
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=password
-      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=${MYSQL_DB_NAME}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       timeout: 5s
       retries: 10
+  ###=================================================###
   redis:
     image: redis
     container_name: go_oauth2_redis
+    env_file:
+      - ./env/test.env
     ports:
-      - 6379:6379
+      - ${REDIS_PORT}:${REDIS_PORT}
+    command: redis-server --requirepass ${REDIS_PASSWORD}

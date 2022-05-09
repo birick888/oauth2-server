@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/spf13/viper"
 
@@ -33,12 +37,26 @@ func init() {
 }
 
 func main() {
-	dbHost := viper.GetString(`database.host`)
-	dbPort := viper.GetString(`database.port`)
-	dbUser := viper.GetString(`database.user`)
-	dbPass := viper.GetString(`database.pass`)
-	dbName := viper.GetString(`database.name`)
-	connection := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbHost, dbPort, dbName)
+
+	// dbHost := viper.GetString(`database.host`)
+	// dbPort := viper.GetString(`database.port`)
+	// dbUser := viper.GetString(`database.user`)
+	// dbPass := viper.GetString(`database.pass`)
+	// dbName := viper.GetString(`database.name`)
+
+	err := godotenv.Load(filepath.Join("./env", "test.env"))
+	if err != nil {
+		log.Fatalf("Some error occured. Err: %s", err)
+	}
+
+	// Connect mysql
+	mySQL_DB_NAME := os.Getenv("MYSQL_DB_NAME")
+	mySQL_USER := os.Getenv("MYSQL_USER")
+	mySQL_PASSWORD := os.Getenv("MYSQL_PASSWORD")
+	mySQL_HOST := os.Getenv("MYSQL_HOST")
+	mySQL_PORT := os.Getenv("MYSQL_PORT")
+
+	connection := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mySQL_USER, mySQL_PASSWORD, mySQL_HOST, mySQL_PORT, mySQL_DB_NAME)
 	val := url.Values{}
 	val.Add("parseTime", "1")
 	val.Add("loc", "Asia/Jakarta")
@@ -60,15 +78,23 @@ func main() {
 		}
 	}()
 
-	redisHost := viper.GetString(`redis.host`)
-	redisPort := viper.GetString(`redis.port`)
-	redisDB := viper.GetInt(`redis.db`)
-	redisPassword := viper.GetString(`redis.password`)
+	// Connect redis
+	// redisHost := viper.GetString(`redis.host`)
+	// redisPort := viper.GetString(`redis.port`)
+	// redisDB := viper.GetInt(`redis.db`)
+	// redisPassword := viper.GetString(`redis.password`)
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPort := os.Getenv("REDIS_PORT")
+	redisDBSlot, err := strconv.Atoi(os.Getenv("REDIS_DB_SLOT"))
+	if err != nil {
+		os.Exit(2)
+	}
+	redisPassword := os.Getenv("REDIS_PASSWORD")
 
 	redisConn := redis.NewClient(&redis.Options{
 		Addr:     redisHost + ":" + redisPort,
 		Password: redisPassword,
-		DB:       redisDB, // use default DB
+		DB:       redisDBSlot, // use default DB
 	})
 
 	e := echo.New()

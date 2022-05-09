@@ -16,14 +16,14 @@ docker:
 	docker build -t go_oauth2 .
 
 run:
-	docker-compose up --build -d
+	docker-compose --env-file ./env/test.env up --build -d
 
 remove:
 	docker stop go_oauth2_api go_oauth2_mysql go_oauth2_redis
 	docker rm go_oauth2_api go_oauth2_mysql go_oauth2_redis
 
 stop:
-	docker-compose down
+	docker-compose --env-file ./env/test.env down
 
 lint-prepare:
 	@echo "Installing golangci-lint" 

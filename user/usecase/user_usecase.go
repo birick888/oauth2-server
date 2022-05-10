@@ -14,8 +14,9 @@ type userUsecase struct {
 	contextTimeout time.Duration
 }
 
-// NewUserUsecase will create new an articleUsecase object representation of domain.ArticleUsecase interface
-func NewUserUsecase(ur domain.UserRepository, userOTP domain.UserOTPRepository, timeout time.Duration) domain.UserUsecase {
+func NewUserUsecase(ur domain.UserRepository,
+	userOTP domain.UserOTPRepository,
+	timeout time.Duration) domain.UserUsecase {
 	return &userUsecase{
 		userRepo:       ur,
 		userOTPRepo:    userOTP,

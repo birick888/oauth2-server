@@ -3,7 +3,6 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"math/rand"
 	"mime/quotedprintable"
 	"net/smtp"
@@ -13,6 +12,8 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -35,6 +36,12 @@ var (
 )
 
 func init() {
+	LoadConfig()
+	ConfigLogrus()
+	ConfigSMTP()
+}
+
+func LoadConfig() {
 	err := godotenv.Load(filepath.Join("./env", "test.env"))
 	if err != nil {
 		log.Fatalf("Error load env file. Err: %s", err)
@@ -47,7 +54,31 @@ func init() {
 		log.Fatalf("Error load config file. Err: %s", err)
 		os.Exit(2)
 	}
+}
 
+func ConfigLogrus() {
+	rotationCount := uint(viper.GetInt("log.rotate.rotationCount"))
+	writer, err := rotatelogs.New(
+		viper.GetString("log.path")+viper.GetString("log.logPattern"),
+		rotatelogs.WithLinkName(viper.GetString("log.path")),
+		rotatelogs.WithRotationTime(time.Duration(viper.GetInt("log.rotate.rotationTime"))*time.Minute),
+		rotatelogs.WithRotationCount(rotationCount),
+	)
+
+	if err != nil {
+		log.Error(err)
+		os.Exit(2)
+	}
+
+	log.SetOutput(writer)
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors:   viper.GetBool("log.disableCorlors"),
+		TimestampFormat: viper.GetString("timeStampFormat"),
+		FullTimestamp:   viper.GetBool("log.fullTimestamp"),
+	})
+}
+
+func ConfigSMTP() {
 	host = viper.GetString(`smtp.host`)
 	port = viper.GetString(`smtp.port`)
 	from = os.Getenv("SMTP_USER")
@@ -84,7 +115,7 @@ func CreateToken(userid int64) (string, error) {
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
 	atClaims["user_id"] = userid
-	atClaims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	atClaims["exp"] = time.Now().Add(time.Minute * time.Duration(viper.GetInt("token.expire"))).Unix()
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	token, err := at.SignedString([]byte(os.Getenv("ACCESS_SECRET")))
 	if err != nil {
@@ -106,14 +137,14 @@ func VerifyToken(token string) (bool, error) {
 
 // SendEmail is
 func SendEmail(email string, otp int) (err error) {
-	msg = fmt.Sprintf(msg, email, otp)
+	msgContent := fmt.Sprintf(msg, email, otp)
 	recipients = []string{email}
 	headerMessage := ""
 	for key, value := range header {
 		headerMessage += fmt.Sprintf("%s: %s\r\n", key, value)
 	}
 
-	body := "<h3>" + msg + "</h3>"
+	body := "<h3>" + msgContent + "</h3>"
 	var bodyMessage bytes.Buffer
 	temp := quotedprintable.NewWriter(&bodyMessage)
 	temp.Write([]byte(body))

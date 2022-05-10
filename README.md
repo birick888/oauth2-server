@@ -19,13 +19,16 @@ This project has  4 Domain layer :
 Here is the steps to run it with `docker-compose`
 
 ```bash
-#move to directory
+# Create logs directory. Make sure can write to logs directory with current user
+mkdir /var/log/oauth2-server
+
+# Move
 $ cd workspace
 
 # Clone into YOUR $GOPATH/src
 $ git clone https://github.com/menduong/oauth2.git
 
-#move to project
+# Move
 $ cd oauth2
 
 # Build the docker image first

@@ -13,6 +13,8 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/labstack/echo v3.3.5+incompatible
 	github.com/labstack/gommon v0.0.0-20180426014445-588f4e8bddc6 // indirect
+	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/lestrrat-go/strftime v1.0.6 // indirect
 	github.com/magiconair/properties v1.7.6 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.3 // indirect
@@ -31,6 +33,7 @@ require (
 	github.com/valyala/fasttemplate v0.0.0-20170224212429-dcecefd839c4 // indirect
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.15.0
 )

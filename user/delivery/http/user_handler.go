@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/menduong/oauth2/common"
@@ -49,7 +50,7 @@ func (u *UserHandler) GetByID(c echo.Context) error {
 
 	user, err := u.UserUsecase.GetByID(ctx, id)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, user)
@@ -57,34 +58,32 @@ func (u *UserHandler) GetByID(c echo.Context) error {
 
 // Login will check email, password
 func (u *UserHandler) Login(c echo.Context) (err error) {
-	fmt.Println("Call login service")
-	// email := c.Param("email")
-	// password := c.Param("password")
+	log.Info("Call login service")
 	var user domain.User
 	err = c.Bind(&user)
+	if err != nil {
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
+	}
 
 	email := user.Email
 	password := user.Password
 
-	fmt.Println("Email: ", email)
-	fmt.Println("Password: ", password)
-
 	ctx := c.Request().Context()
 	userStored, err := u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
 	}
 
 	// compare password
 	compare := common.IsMatchedPassword(password, userStored.Password)
-	if compare != true {
-		return c.JSON(getStatusCode(err), ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
+	if !compare {
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: domain.ErrEmailOrPasswordNotMatch.Error()})
 	}
 
 	// generate token
 	token, err := common.CreateToken(userStored.ID)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	// init json value to response
@@ -98,18 +97,19 @@ func (u *UserHandler) Login(c echo.Context) (err error) {
 
 // RequestOTP will
 func (u *UserHandler) RequestOTP(c echo.Context) (err error) {
-	fmt.Println("Call RequestOTP service")
-	// email := c.Param("email")
-	// password := c.Param("password")
+	log.Info("Call RequestOTP service")
 	var user domain.User
 	err = c.Bind(&user)
+	if err != nil {
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
+	}
 
 	email := user.Email
 
 	ctx := c.Request().Context()
 	_, err = u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: domain.ErrEmailNotExists.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: domain.ErrEmailNotExists.Error()})
 	}
 
 	// Generate random OTP number 4 length
@@ -118,11 +118,14 @@ func (u *UserHandler) RequestOTP(c echo.Context) (err error) {
 	// Send email OTP
 	err = common.SendEmail(email, otp)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	// Store OTP to redis
-	err = u.UserUsecase.SetOTP(ctx, email, strconv.Itoa(otp), time.Duration(5)*time.Minute)
+	err = u.UserUsecase.SetOTP(ctx, email, strconv.Itoa(otp), time.Duration(viper.GetInt("otp.expire"))*time.Minute)
+	if err != nil {
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
+	}
 
 	msg := "An OTP already sent to your email %s successful"
 	msg = fmt.Sprintf(msg, email)
@@ -132,26 +135,22 @@ func (u *UserHandler) RequestOTP(c echo.Context) (err error) {
 
 // ResetPassword will
 func (u *UserHandler) ResetPassword(c echo.Context) (err error) {
-	fmt.Println("Call ResetPassword service")
+	log.Info("Call ResetPassword service")
 	email := c.FormValue("email")
 	password := c.FormValue("password")
 	otp := c.FormValue("otp")
 
-	fmt.Println("email: ", email)
-	fmt.Println("password: ", password)
-	fmt.Println("otp: ", otp)
-
 	ctx := c.Request().Context()
 	userStored, err := u.UserUsecase.GetByEmail(ctx, email)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: domain.ErrEmailNotExists.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: domain.ErrEmailNotExists.Error()})
 	}
 
 	// Store OTP to redis
 	otpRedis, err := u.UserUsecase.GetOTP(ctx, email)
 
 	if otpRedis != otp {
-		return c.JSON(getStatusCode(err), ResponseError{Message: domain.ErrOTPWrongOrExpire.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: domain.ErrOTPWrongOrExpire.Error()})
 	}
 
 	// Update new password to DB
@@ -159,7 +158,7 @@ func (u *UserHandler) ResetPassword(c echo.Context) (err error) {
 	err = u.UserUsecase.Update(ctx, &userStored)
 
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, "Reset password successful")
@@ -167,9 +166,8 @@ func (u *UserHandler) ResetPassword(c echo.Context) (err error) {
 
 // Store will store the user by given request body
 func (u *UserHandler) Store(c echo.Context) (err error) {
+	log.Info("Call store user")
 	var user domain.User
-	fmt.Println("Call store user")
-	fmt.Printf("%+v\n", user)
 	err = c.Bind(&user)
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, err.Error())
@@ -185,7 +183,7 @@ func (u *UserHandler) Store(c echo.Context) (err error) {
 	user.UpdatedAt = time.Now()
 	err = u.UserUsecase.Store(ctx, &user)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, user)
@@ -203,7 +201,7 @@ func (u *UserHandler) Delete(c echo.Context) error {
 
 	err = u.UserUsecase.Delete(ctx, id)
 	if err != nil {
-		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -216,22 +214,4 @@ func isValidate(m *domain.User) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-func getStatusCode(err error) int {
-	if err == nil {
-		return http.StatusOK
-	}
-
-	logrus.Error(err)
-	switch err {
-	case domain.ErrInternalServerError:
-		return http.StatusInternalServerError
-	case domain.ErrNotFound:
-		return http.StatusNotFound
-	case domain.ErrConflict:
-		return http.StatusConflict
-	default:
-		return http.StatusInternalServerError
-	}
 }

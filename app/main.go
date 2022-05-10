@@ -3,51 +3,29 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
-	"github.com/spf13/viper"
-
+	"github.com/menduong/oauth2/common"
 	_userHttpDelivery "github.com/menduong/oauth2/user/delivery/http"
 	_userHttpDeliveryMiddleware "github.com/menduong/oauth2/user/delivery/http/middleware"
 	_userRepo "github.com/menduong/oauth2/user/repository/mysql"
 	_redisRepo "github.com/menduong/oauth2/user/repository/redis"
 	_userUcase "github.com/menduong/oauth2/user/usecase"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 func init() {
-	viper.SetConfigFile(`config.json`)
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	if viper.GetBool(`debug`) {
-		log.Println("Service RUN on DEBUG mode")
-		log.Println(viper.GetString(`smtp.content`))
-	}
+	common.LoadConfig()
 }
 
 func main() {
-
-	// dbHost := viper.GetString(`database.host`)
-	// dbPort := viper.GetString(`database.port`)
-	// dbUser := viper.GetString(`database.user`)
-	// dbPass := viper.GetString(`database.pass`)
-	// dbName := viper.GetString(`database.name`)
-
-	err := godotenv.Load(filepath.Join("./env", "test.env"))
-	if err != nil {
-		log.Fatalf("Some error occured. Err: %s", err)
-	}
 
 	// Connect mysql
 	mySQL_DB_NAME := os.Getenv("MYSQL_DB_NAME")
@@ -79,10 +57,6 @@ func main() {
 	}()
 
 	// Connect redis
-	// redisHost := viper.GetString(`redis.host`)
-	// redisPort := viper.GetString(`redis.port`)
-	// redisDB := viper.GetInt(`redis.db`)
-	// redisPassword := viper.GetString(`redis.password`)
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisDBSlot, err := strconv.Atoi(os.Getenv("REDIS_DB_SLOT"))
@@ -94,7 +68,7 @@ func main() {
 	redisConn := redis.NewClient(&redis.Options{
 		Addr:     redisHost + ":" + redisPort,
 		Password: redisPassword,
-		DB:       redisDBSlot, // use default DB
+		DB:       redisDBSlot,
 	})
 
 	e := echo.New()
@@ -107,6 +81,5 @@ func main() {
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
 	uu := _userUcase.NewUserUsecase(ur, userRedis, timeoutContext)
 	_userHttpDelivery.NewUserHandler(e, uu)
-
-	log.Fatal(e.Start(viper.GetString("server.address")))
+	log.Info(e.Start(viper.GetString("server.address")))
 }

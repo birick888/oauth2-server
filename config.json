@@ -4,15 +4,29 @@
     "address": ":9090"
   },
   "context":{
-    "timeout":2
+    "timeout": 2
   },
   "smtp": {
       "host": "smtp.gmail.com",
       "port": "587",
       "msg": "Your OTP for %s is: %d"
   },
+  "otp": {
+    "expire": 5
+  },
   "token": {
-    "expire":15
+    "expire": 15
+  },
+  "log": {
+    "path": "./logs/app.log",
+    "logPattern": ".%Y%m%d%H%M",
+    "disableColors":   false,
+		"timestampFormat": "2006-01-02 15:04:05",
+		"fullTimestamp":   true,
+    "rotate": {
+      "maxAge": 10080,
+      "rotationTime": 60,
+      "rotationCount": 256
+    }
   }
-
 }

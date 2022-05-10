@@ -17,7 +17,7 @@ services:
     volumes:
       - ./config.json:/app/config.json
       - ./env:/app/env/
-
+      - /var/log/oauth2-server:/app/logs
     environment: 
       WAIT_HOSTS: mysql:${MYSQL_PORT}, redis:${REDIS_PORT}
   ###=================================================###
@@ -28,8 +28,6 @@ services:
     container_name: go_oauth2_mysql
     env_file:
       - ./env/test.env
-    volumes:
-      - ./db_oauth2.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - ${MYSQL_PORT}:${MYSQL_PORT}
     environment:
@@ -37,16 +35,21 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - /var/mysql_oauth2_srv:/var/lib/mysql
+      - ./db_oauth2.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       timeout: 5s
       retries: 10
   ###=================================================###
   redis:
-    image: redis
+    image: bitnami/redis:latest
     container_name: go_oauth2_redis
     env_file:
       - ./env/test.env
     ports:
       - ${REDIS_PORT}:${REDIS_PORT}
     command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - /var/redis_oauth2_srv:/bitnami/redis/data

@@ -59,9 +59,9 @@ func (m *mysqlUserRepository) fetch(ctx context.Context,
 }
 
 func (m *mysqlUserRepository) Fetch(ctx context.Context,
-	cursor string,
-	num int64) (res []domain.User, nextCursor string, err error) {
-	query := `SELECT id, username, email, password, updated_at, created_at FROM user LIMIT ? `
+	cursor string, num int64) (res []domain.User, nextCursor string, err error) {
+	query := `SELECT id, username, email, password, updated_at, created_at
+  						FROM user WHERE created_at > ? ORDER BY created_at LIMIT ? `
 
 	decodedCursor, err := repository.DecodeCursor(cursor)
 	if err != nil && cursor != "" {
@@ -73,13 +73,15 @@ func (m *mysqlUserRepository) Fetch(ctx context.Context,
 		return nil, "", err
 	}
 
+	if len(res) == int(num) {
+		nextCursor = repository.EncodeCursor(res[len(res)-1].CreatedAt)
+	}
+
 	return
 }
 
 func (m *mysqlUserRepository) GetByID(ctx context.Context, id int64) (res domain.User, err error) {
-	query := `SELECT id, username, email, password, updated_at, created_at
-  						FROM user WHERE ID = ?`
-
+	query := `SELECT id, username, email, password, updated_at, created_at FROM user WHERE ID = ?`
 	list, err := m.fetch(ctx, query, id)
 	if err != nil {
 		return domain.User{}, err
@@ -113,13 +115,13 @@ func (m *mysqlUserRepository) GetByEmail(ctx context.Context, email string) (res
 }
 
 func (m *mysqlUserRepository) Store(ctx context.Context, a *domain.User) (err error) {
-	query := `INSERT user SET username=?, email=? , password=? , created_at=?, updated_at=?`
+	query := `INSERT user SET username=?, email=?, password=?, updated_at=?, created_at=?`
 	stmt, err := m.Conn.PrepareContext(ctx, query)
 	if err != nil {
 		return
 	}
 
-	res, err := stmt.ExecContext(ctx, a.Username, a.Email, a.Password, a.CreatedAt, a.UpdatedAt)
+	res, err := stmt.ExecContext(ctx, a.Username, a.Email, a.Password, a.UpdatedAt, a.CreatedAt)
 	if err != nil {
 		return
 	}
@@ -150,7 +152,7 @@ func (m *mysqlUserRepository) Delete(ctx context.Context, id int64) (err error) 
 	}
 
 	if rowsAfected != 1 {
-		err = fmt.Errorf("Weird  Behavior. Total Affected: %d", rowsAfected)
+		err = fmt.Errorf("weird  behavior. total affected: %d", rowsAfected)
 		return
 	}
 
@@ -173,7 +175,7 @@ func (m *mysqlUserRepository) Update(ctx context.Context, ar *domain.User) (err 
 		return
 	}
 	if affect != 1 {
-		err = fmt.Errorf("Weird  Behavior. Total Affected: %d", affect)
+		err = fmt.Errorf("weird  behavior. total affected: %d", affect)
 		return
 	}
 

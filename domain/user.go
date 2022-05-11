@@ -28,6 +28,7 @@ type UserUsecase interface {
 
 // UserRepository ...
 type UserRepository interface {
+	Fetch(ctx context.Context, cursor string, num int64) ([]User, string, error)
 	GetByID(ctx context.Context, id int64) (User, error)
 	GetByEmail(ctx context.Context, email string) (User, error)
 	Update(ctx context.Context, us *User) error

@@ -8,12 +8,13 @@ import (
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	log "github.com/sirupsen/logrus"
+	logrus "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -44,14 +45,14 @@ func init() {
 func LoadConfig() {
 	err := godotenv.Load(filepath.Join("./env", "test.env"))
 	if err != nil {
-		log.Fatalf("Error load env file. Err: %s", err)
+		logrus.Fatalf("Error load env file. Err: %s", err)
 		os.Exit(2)
 	}
 
 	viper.SetConfigFile(`config.json`)
 	err = viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("Error load config file. Err: %s", err)
+		logrus.Fatalf("Error load config file. Err: %s", err)
 		os.Exit(2)
 	}
 }
@@ -66,15 +67,23 @@ func ConfigLogrus() {
 	)
 
 	if err != nil {
-		log.Error(err)
+		logrus.Error(err)
 		os.Exit(2)
 	}
-
-	log.SetOutput(writer)
-	log.SetFormatter(&log.TextFormatter{
+	logrus.SetReportCaller(true)
+	logrus.SetOutput(writer)
+	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableColors:   viper.GetBool("log.disableCorlors"),
 		TimestampFormat: viper.GetString("timeStampFormat"),
 		FullTimestamp:   viper.GetBool("log.fullTimestamp"),
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			// this function is required when you want to introduce your custom format.
+			// In my case I wanted file and line to look like this `file="engine.go:141`
+			// but f.File provides a full path along with the file name.
+			// So in `formatFilePath()` function I just trimmed everything before the file name
+			// and added a line number in the end
+			return "", fmt.Sprintf("%s:%d", filepath.Base(f.File), f.Line)
+		},
 	})
 }
 

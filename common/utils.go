@@ -19,12 +19,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Token struct define
-type Token struct {
-	UserID int64  `json:"userid" form:"userid" query:"userid"`
-	Token  string `json:"token" form:"token" query:"token"`
-}
-
 var (
 	header     map[string]string
 	from       string
@@ -82,7 +76,7 @@ func ConfigLogrus() {
 			// but f.File provides a full path along with the file name.
 			// So in `formatFilePath()` function I just trimmed everything before the file name
 			// and added a line number in the end
-			return "", fmt.Sprintf("%s:%d", filepath.Base(f.File), f.Line)
+			return "", fmt.Sprintf("%s:%s:%d", filepath.Base(f.File), f.Function, f.Line)
 		},
 	})
 }
@@ -118,7 +112,7 @@ func IsMatchedPassword(password, hash string) bool {
 }
 
 // CreateToken is
-func CreateToken(userid int64) (string, error) {
+func CreateToken(userid string) (string, error) {
 	var err error
 	// Creating Access Token
 	atClaims := jwt.MapClaims{}

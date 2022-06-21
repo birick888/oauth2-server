@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/menduong/oauth2/domain"
@@ -80,20 +81,18 @@ func (m *mysqlUserRepository) Fetch(ctx context.Context,
 	return
 }
 
-func (m *mysqlUserRepository) GetByID(ctx context.Context, id int64) (res domain.User, err error) {
+func (m *mysqlUserRepository) GetByID(ctx context.Context, id string) (res domain.User, err error) {
 	query := `SELECT id, username, email, password, updated_at, created_at FROM user WHERE ID = ?`
 	list, err := m.fetch(ctx, query, id)
 	if err != nil {
 		return domain.User{}, err
 	}
 
-	if len(list) > 0 {
-		res = list[0]
-	} else {
-		return res, domain.ErrNotFound
+	if len(list) <= 0 {
+		return domain.User{}, domain.ErrNotFound
 	}
-
-	return
+	res = list[0]
+	return res, nil
 }
 
 func (m *mysqlUserRepository) GetByEmail(ctx context.Context, email string) (res domain.User, err error) {
@@ -105,35 +104,30 @@ func (m *mysqlUserRepository) GetByEmail(ctx context.Context, email string) (res
 		return domain.User{}, err
 	}
 
-	if len(list) > 0 {
-		res = list[0]
-	} else {
-		return res, domain.ErrNotFound
+	if len(list) <= 0 {
+		return domain.User{}, domain.ErrNotFound
 	}
+	res = list[0]
 
-	return
+	return res, nil
 }
 
-func (m *mysqlUserRepository) Store(ctx context.Context, a *domain.User) (err error) {
-	query := `INSERT user SET username=?, email=?, password=?, updated_at=?, created_at=?`
+func (m *mysqlUserRepository) Store(ctx context.Context, user *domain.User) (id string, err error) {
+	query := `INSERT INTO user(id, username, email, password, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?)`
 	stmt, err := m.Conn.PrepareContext(ctx, query)
 	if err != nil {
-		return
+		return "", err
 	}
 
-	res, err := stmt.ExecContext(ctx, a.Username, a.Email, a.Password, a.UpdatedAt, a.CreatedAt)
-	if err != nil {
-		return
-	}
-	lastID, err := res.LastInsertId()
-	if err != nil {
-		return
-	}
-	a.ID = lastID
-	return
+	// Generate uuid v4
+	newUUID := uuid.New().String()
+
+	_, err = stmt.ExecContext(ctx, newUUID, user.Username, user.Email, user.Password, user.UpdatedAt, user.CreatedAt)
+
+	return newUUID, err
 }
 
-func (m *mysqlUserRepository) Delete(ctx context.Context, id int64) (err error) {
+func (m *mysqlUserRepository) Delete(ctx context.Context, id string) (err error) {
 	query := "DELETE FROM user WHERE id = ?"
 
 	stmt, err := m.Conn.PrepareContext(ctx, query)

@@ -28,8 +28,8 @@ services:
     container_name: go_oauth2_mysql
     env_file:
       - ./env/test.env
-    ports:
-      - ${MYSQL_PORT}:${MYSQL_PORT}
+    # ports:
+    #   - ${MYSQL_PORT}:${MYSQL_PORT}
     environment:
       - MYSQL_DATABASE=${MYSQL_DB_NAME}
       - MYSQL_USER=${MYSQL_USER}

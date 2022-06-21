@@ -40,15 +40,16 @@ func NewUserHandler(e *echo.Echo, us domain.UserUsecase) {
 
 // GetByID will get user by given id
 func (u *UserHandler) GetByID(c echo.Context) error {
-	idP, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	log.Info("Call GetByID")
+	idParam := c.Param("id")
+	log.Info("idParam: ", idParam)
+	if len(idParam) <= 0 {
 		return c.JSON(http.StatusNotFound, domain.ErrNotFound.Error())
 	}
 
-	id := int64(idP)
 	ctx := c.Request().Context()
 
-	user, err := u.UserUsecase.GetByID(ctx, id)
+	user, err := u.UserUsecase.GetByID(ctx, idParam)
 	if err != nil {
 		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -87,9 +88,10 @@ func (u *UserHandler) Login(c echo.Context) (err error) {
 	}
 
 	// init json value to response
-	tokenJSON := &common.Token{
-		UserID: userStored.ID,
-		Token:  token,
+	tokenJSON := &domain.Token{
+		UserId:       userStored.ID,
+		Token:        token,
+		RefreshToken: "",
 	}
 
 	return c.JSON(http.StatusCreated, tokenJSON)
@@ -185,21 +187,22 @@ func (u *UserHandler) Store(c echo.Context) (err error) {
 	if err != nil {
 		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}
+	// dont send password
+	user.Password = ""
 
 	return c.JSON(http.StatusCreated, user)
 }
 
 // Delete will delete user by given param
 func (u *UserHandler) Delete(c echo.Context) error {
-	idP, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	idParam := c.Param("id")
+	if len(idParam) <= 0 {
 		return c.JSON(http.StatusNotFound, domain.ErrNotFound.Error())
 	}
 
-	id := int64(idP)
 	ctx := c.Request().Context()
 
-	err = u.UserUsecase.Delete(ctx, id)
+	err := u.UserUsecase.Delete(ctx, idParam)
 	if err != nil {
 		return c.JSON(domain.GetStatusCode(err), ResponseError{Message: err.Error()})
 	}

@@ -24,21 +24,18 @@ func NewUserUsecase(ur domain.UserRepository,
 	}
 }
 
-func (a *userUsecase) GetByID(c context.Context, id int64) (res domain.User, err error) {
+func (a *userUsecase) GetByID(c context.Context, id string) (res domain.User, err error) {
 	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
 	defer cancel()
 
-	res, err = a.userRepo.GetByID(ctx, id)
-	if err != nil {
-		return
-	}
-
-	resUser, err := a.userRepo.GetByID(ctx, res.ID)
+	resUser, err := a.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
-	res = resUser
-	return
+
+	// dont send password
+	resUser.Password = ""
+	return resUser, nil
 }
 
 func (a *userUsecase) Update(c context.Context, u *domain.User) (err error) {
@@ -54,8 +51,8 @@ func (a *userUsecase) Update(c context.Context, u *domain.User) (err error) {
 func (a *userUsecase) Store(c context.Context, u *domain.User) (err error) {
 	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
 	defer cancel()
-	existedUser, _ := a.GetByEmail(ctx, u.Email)
-	if existedUser.ID > 0 {
+	existedUser, err := a.GetByEmail(ctx, u.Email)
+	if len(existedUser.ID) > 0 {
 		return domain.ErrEmailAlreadyExists
 	}
 
@@ -66,20 +63,15 @@ func (a *userUsecase) Store(c context.Context, u *domain.User) (err error) {
 
 	u.Password = password
 
-	err = a.userRepo.Store(ctx, u)
+	_, err = a.userRepo.Store(ctx, u)
 	return
 }
 
-func (a *userUsecase) Delete(c context.Context, id int64) (err error) {
+func (a *userUsecase) Delete(c context.Context, id string) (err error) {
 	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
 	defer cancel()
-	existedUser, err := a.userRepo.GetByID(ctx, id)
-	if err != nil {
-		return
-	}
-	if existedUser.ID > 0 {
-		return domain.ErrNotFound
-	}
+
+	_, err = a.userRepo.GetByID(ctx, id)
 
 	return a.userRepo.Delete(ctx, id)
 }
@@ -89,16 +81,7 @@ func (a *userUsecase) GetByEmail(c context.Context, email string) (res domain.Us
 	defer cancel()
 
 	res, err = a.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		return
-	}
-
-	resUser, err := a.userRepo.GetByID(ctx, res.ID)
-	if err != nil {
-		return domain.User{}, err
-	}
-	res = resUser
-	return
+	return res, nil
 }
 
 func (a *userUsecase) GetOTP(c context.Context, email string) (otp string, err error) {

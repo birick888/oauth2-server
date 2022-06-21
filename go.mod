@@ -11,6 +11,7 @@ require (
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.3.0
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
 	github.com/joho/godotenv v1.4.0
 	github.com/jonboulle/clockwork v0.3.0 // indirect

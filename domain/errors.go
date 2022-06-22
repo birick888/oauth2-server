@@ -4,7 +4,15 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
+)
+
+var (
+	// ErrRateLimitExceeded denotes an error raised when rate limit is exceeded
+	ErrRateLimitExceeded = echo.NewHTTPError(http.StatusTooManyRequests, "rate limit exceeded")
+	// ErrExtractorError denotes an error raised when extractor function is unsuccessful
+	ErrExtractorError = echo.NewHTTPError(http.StatusForbidden, "error while extracting identifier")
 )
 
 var (

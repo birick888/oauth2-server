@@ -10,8 +10,10 @@ import (
 
 	"github.com/go-redis/redis"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/menduong/oauth2/common"
+	"github.com/menduong/oauth2/domain"
 	_userHttpDelivery "github.com/menduong/oauth2/user/delivery/http"
 	_userHttpDeliveryMiddleware "github.com/menduong/oauth2/user/delivery/http/middleware"
 	_userRepo "github.com/menduong/oauth2/user/repository/mysql"
@@ -74,6 +76,34 @@ func main() {
 	e := echo.New()
 	middL := _userHttpDeliveryMiddleware.InitMiddleware()
 	e.Use(middL.CORS)
+
+	config := middleware.RateLimiterConfig{
+		Skipper: middleware.DefaultSkipper,
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{Rate: 1, Burst: 1, ExpiresIn: 3 * time.Minute},
+		),
+		IdentifierExtractor: func(ctx echo.Context) (string, error) {
+			id := ctx.RealIP()
+			return id, nil
+		},
+		ErrorHandler: func(context echo.Context, err error) error {
+			return &echo.HTTPError{
+				Code:     domain.ErrExtractorError.Code,
+				Message:  domain.ErrExtractorError.Message,
+				Internal: err,
+			}
+		},
+		DenyHandler: func(context echo.Context, identifier string, err error) error {
+			return &echo.HTTPError{
+				Code:     domain.ErrRateLimitExceeded.Code,
+				Message:  domain.ErrRateLimitExceeded.Message,
+				Internal: err,
+			}
+		},
+	}
+
+	e.Use(middleware.RateLimiterWithConfig(config))
+
 	ur := _userRepo.NewMysqlUserRepository(dbConn)
 
 	userRedis := _redisRepo.NewRedisUserRepository(redisConn)

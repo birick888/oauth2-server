@@ -26,7 +26,7 @@ mkdir /var/log/oauth2-server
 $ cd workspace
 
 # Clone into YOUR $GOPATH/src
-$ git clone https://github.com/menduong/oauth2.git
+$ git clone https://github.com/menduong/oauth2-server.git
 
 # Move
 $ cd oauth2

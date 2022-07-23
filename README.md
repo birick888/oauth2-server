@@ -29,7 +29,7 @@ $ cd workspace
 $ git clone https://github.com/menduong/oauth2-server.git
 
 # Move
-$ cd oauth2
+$ cd oauth2-server
 
 # Build the docker image first
 $ make docker
